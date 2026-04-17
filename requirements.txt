@@ -6,3 +6,4 @@ yfinance
 duckduckgo-search
 # git+https://github.com/agno-agi/agno.git  # Install manually: pip install git+https://github.com/agno-agi/agno.git (requires pyproject.toml)
 yt-dlp
+youtube-transcript-api

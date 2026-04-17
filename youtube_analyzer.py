@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 from youtube_transcript_api import YouTubeTranscriptApi
 from groq import Groq
+import os
 
 load_dotenv(Path(__file__).parent / "api_keys.env")
 

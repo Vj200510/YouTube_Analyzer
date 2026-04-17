@@ -1,9 +1,11 @@
-# Fix Deployment for Streamlit Cloud
+# Deployment & Cloud Fix TODO
 
-## Steps:
-- [x] 1. Create requirements.txt with necessary dependencies
-- [x] 2. Update README.md with installation and deployment instructions
-- [ ] 3. Stage changes with `git add .`
-- [ ] 4. Commit changes
-- [ ] 5. Push to GitHub branch
-- [ ] 6. Verify files on GitHub and redeploy
+- [x] Push all files to GitHub main (done)
+- [x] Add requirements.txt with deps (done)
+- [x] Ignore api_keys.env (done)
+- [x] Refactor youtube_analyzer.py to Cloud-friendly Groq + transcript (done)
+- [ ] Test local streamlit run ui.py
+- [ ] User redeploy, add GROQ_API_KEY secret
+- [ ] Complete
+
+Cloud now works: deps install, no agno error, analyzes videos with transcript!

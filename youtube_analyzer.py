@@ -1,57 +1,82 @@
 from textwrap import dedent
 from dotenv import load_dotenv
 from pathlib import Path
-from agno.agent import Agent
-from agno.models.groq import Groq
-from agno.tools.youtube import YouTubeTools
+import re
+from youtube_transcript_api import YouTubeTranscriptApi
+from groq import Groq
 
 load_dotenv(Path(__file__).parent / "api_keys.env")
 
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
 def build_youtube_agent():
-    return Agent(
-        name="YouTube Agent",
-        model=Groq(id="qwen/qwen3-32b"),
-        tools=[YouTubeTools()],
-        instructions=dedent("""\
-            You are an expert YouTube content analyst with a keen eye for detail! 🎓
-            Follow these steps for comprehensive video analysis:
-            1. Video Overview
-            - Check video length and basic metadata
-            - Identify video type (tutorial, review, lecture, etc.)
-            - Note the content structure
-            2. Timestamp Creation
-            - Create precise, meaningful timestamps
-            - Focus on major topic transitions
-            - Highlight key moments and demonstrations
-            - Format: [start_time, end_time, detailed_summary]
-            3. Content Organization
-            - Group related segments
-            - Identify main themes
-            - Track topic progression
+    instructions = dedent("""\
+        You are an expert YouTube content analyst with a keen eye for detail! 🎓
+        Follow these steps for comprehensive video analysis:
+        1. Video Overview
+        - Check video length and basic metadata
+        - Identify video type (tutorial, review, lecture, etc.)
+        - Note the content structure
+        2. Timestamp Creation
+        - Create precise, meaningful timestamps
+        - Focus on major topic transitions
+        - Highlight key moments and demonstrations
+        - Format: [start_time, end_time, detailed_summary]
+        3. Content Organization
+        - Group related segments
+        - Identify main themes
+        - Track topic progression
 
-            Your analysis style:
-            - Begin with a video overview
-            - Use clear, descriptive segment titles
-            - Include relevant emojis for content types:
-            📚 Educational
-            💻 Technical
-            🎮 Gaming
-            📱 Tech Review
-            🎨 Creative
-            - Highlight key learning points
-            - Note practical demonstrations
-            - Mark important references
+        Your analysis style:
+        - Begin with a video overview
+        - Use clear, descriptive segment titles
+        - Include relevant emojis for content types:
+        📚 Educational
+        💻 Technical
+        🎮 Gaming
+        📱 Tech Review
+        🎨 Creative
+        - Highlight key learning points
+        - Note practical demonstrations
+        - Mark important references
 
-            Quality Guidelines:
-            - Verify timestamp accuracy
-            - Avoid timestamp hallucination
-            - Ensure comprehensive coverage
-            - Maintain consistent detail level
-            - Focus on valuable content markers
-        """),
-        add_datetime_to_context=True,
-        markdown=True,
-    )
+        Quality Guidelines:
+        - Verify timestamp accuracy
+        - Avoid timestamp hallucination
+        - Ensure comprehensive coverage
+        - Maintain consistent detail level
+        - Focus on valuable content markers
+    """)
+
+    def analyze(prompt):
+        video_url = prompt.replace("Analyze this video: ", "").strip()
+        video_id_match = re.search(r"(?<=v=)[^&]+", video_url)
+        if not video_id_match:
+            class MockResponse:
+                content = "Invalid YouTube URL"
+            return MockResponse()
+        video_id = video_id_match.group(0)
+        try:
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+            transcript = ' '.join([entry['text'] for entry in transcript_list])
+        except Exception as e:
+            class MockResponse:
+                content = f"Could not fetch transcript: {str(e)}"
+            return MockResponse()
+        response = client.chat.completions.create(
+            model="llama3.1-70b-versatile",
+            messages=[
+                {"role": "system", "content": instructions},
+                {"role": "user", "content": f"{prompt}\n\nTranscript: {transcript[:12000]}... (truncated for token limit)"}
+            ],
+            temperature=0.1,
+            max_tokens=4096
+        )
+        class MockResponse:
+            content = response.choices[0].message.content
+        return MockResponse()
+
+    return analyze
 
 # youtube_agent.print_response(
 #     "Analyze this video: https://www.youtube.com/watch?v=JkaxUblCGz0",

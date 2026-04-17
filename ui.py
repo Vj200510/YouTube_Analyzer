@@ -21,7 +21,7 @@ button = st.button("Analyze Video") # True/False
 
 if video_url and button:
     with st.spinner("Analyzing video...."):
-        response = agent.run(
+        response = agent(
             f"Analyze this video: {video_url}"
         )
 

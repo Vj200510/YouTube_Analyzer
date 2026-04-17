@@ -1,8 +1,5 @@
 streamlit
 python-dotenv
-rich
 groq
-yfinance
-duckduckgo-search
-git+https://github.com/agno-agi/agno.git
-yt-dlp
+youtube-transcript-api
+requests

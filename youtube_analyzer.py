@@ -2,9 +2,9 @@ from textwrap import dedent
 from dotenv import load_dotenv
 from pathlib import Path
 import re
+import os
 from youtube_transcript_api import YouTubeTranscriptApi
 from groq import Groq
-import os
 
 load_dotenv(Path(__file__).parent / "api_keys.env")
 
@@ -49,37 +49,33 @@ def build_youtube_agent():
         - Focus on valuable content markers
     """)
 
-    def analyze(prompt):
-        video_url = prompt.replace("Analyze this video: ", "").strip()
-        video_id_match = re.search(r"(?<=v=)[^&]+", video_url)
-        if not video_id_match:
+    class AgentLike:
+        def run(self, prompt):
+            video_url = prompt.replace("Analyze this video: ", "").strip()
+            video_id_match = re.search(r"(?<=v=)[^&]+", video_url)
+            if not video_id_match:
+                class MockResponse:
+                    content = "Invalid YouTube URL"
+                return MockResponse()
+            video_id = video_id_match.group(0)
+            try:
+                transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+                transcript = ' '.join([entry['text'] for entry in transcript_list])
+            except Exception as e:
+                class MockResponse:
+                    content = f"Could not fetch transcript: {str(e)}"
+                return MockResponse()
+            response = client.chat.completions.create(
+                model="llama3.1-70b-versatile",
+                messages=[
+                    {"role": "system", "content": instructions},
+                    {"role": "user", "content": f"{prompt}\n\nTranscript: {transcript[:12000]}... (truncated for token limit)"}
+                ],
+                temperature=0.1,
+                max_tokens=4096
+            )
             class MockResponse:
-                content = "Invalid YouTube URL"
+                content = response.choices[0].message.content
             return MockResponse()
-        video_id = video_id_match.group(0)
-        try:
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-            transcript = ' '.join([entry['text'] for entry in transcript_list])
-        except Exception as e:
-            class MockResponse:
-                content = f"Could not fetch transcript: {str(e)}"
-            return MockResponse()
-        response = client.chat.completions.create(
-            model="llama3.1-70b-versatile",
-            messages=[
-                {"role": "system", "content": instructions},
-                {"role": "user", "content": f"{prompt}\n\nTranscript: {transcript[:12000]}... (truncated for token limit)"}
-            ],
-            temperature=0.1,
-            max_tokens=4096
-        )
-        class MockResponse:
-            content = response.choices[0].message.content
-        return MockResponse()
 
-    return analyze
-
-# youtube_agent.print_response(
-#     "Analyze this video: https://www.youtube.com/watch?v=JkaxUblCGz0",
-#     stream=True,
-# )
+    return AgentLike()

@@ -4,5 +4,5 @@ rich
 groq
 yfinance
 duckduckgo-search
-agno-agi
+git+https://github.com/agno-agi/agno.git
 yt-dlp
